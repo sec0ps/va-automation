@@ -96,8 +96,6 @@ def automated_network_enumeration():
     logging.info("Running automated network enumeration...")
 
 def main():
-    # Perform the update check before running the main program
-    check_for_updates()
     """Main function to execute the menu and handle user input."""
     check_zap_running()
 
@@ -164,4 +162,6 @@ def main():
             logging.error("❌ Invalid selection. Please try again.")
 
 if __name__ == "__main__":
+    # Perform the update check before running the main program
+    check_for_updates()
     main()
