@@ -21,6 +21,8 @@ NETWORK_ENUMERATION_FILE = os.path.join(BASE_DIR, "network.enumeration")  # ✅ 
 API_KEY_FILE = os.path.join(BASE_DIR, ".zap_api_key")
 LOG_FILE = os.path.join(LOG_DIR, "automation.log")  # ✅ Define LOG_FILE
 
+ZAP_API_KEY = None
+
 # Ensure log directory exists and is secured
 if not os.path.exists(LOG_DIR):
     os.makedirs(LOG_DIR, exist_ok=True)
@@ -46,10 +48,7 @@ logging.basicConfig(
 
 logging.info("✅ Logging initialized. Log file: %s", LOG_FILE)
 
-def get_api_key():
-    """Return the cached API key."""
-    return ZAP_API_KEY
-
+# config.py
 def load_api_key():
     """Retrieve or prompt the user for the OWASP ZAP API key and store it."""
     if os.path.exists(API_KEY_FILE):
@@ -62,8 +61,14 @@ def load_api_key():
     os.chmod(API_KEY_FILE, 0o600)
     return api_key
 
+def get_api_key():
+    """Return the cached API key, loads it if necessary."""
+    if 'ZAP_API_KEY' not in globals():  # Check if the global variable is not already set
+        global ZAP_API_KEY
+        ZAP_API_KEY = load_api_key()  # Load the key if not already loaded
+    return ZAP_API_KEY
+
 ZAP_API_URL = "http://127.0.0.1:8080"
-ZAP_API_KEY = load_api_key()  # Ensure this function loads the key correctly
 
 ### **✅ Validation Functions**
 def is_valid_ipv4(ip):
