@@ -25,6 +25,7 @@ from config import LOG_DIR, LOG_FILE, find_sqlmap, find_nikto, TARGET_FILE, find
 GITHUB_RAW_BASE = "https://raw.githubusercontent.com/sec0ps/vapt-automation/main/"
 GITHUB_VERSION_URL = GITHUB_RAW_BASE + "version.txt"
 LOCAL_VERSION_FILE = "version.txt"
+
 FILES_TO_UPDATE = [
     "README.md",
     "config.py",
@@ -97,6 +98,13 @@ def automated_network_enumeration():
 
 def main():
     """Main function to execute the menu and handle user input."""
+    # Ensure updates are checked before anything else happens
+    updated = check_for_updates()
+    if updated:
+        print("\n[+] Updates were applied, please restart the program.")
+        return  # Exit after update
+
+    # Proceed with the rest of the program logic if no updates were required
     check_zap_running()
 
     # Locate tools dynamically
@@ -162,6 +170,11 @@ def main():
             logging.error("❌ Invalid selection. Please try again.")
 
 if __name__ == "__main__":
-    # Perform the update check before running the main program
-    check_for_updates()
-    main()
+    try:
+        # Perform the update check before running the main program
+        check_for_updates()
+        main()
+
+    except KeyboardInterrupt:
+        print("\n[!] Program interrupted. Exiting gracefully...")
+        logging.info("🔚 Exiting program due to keyboard interrupt.")
