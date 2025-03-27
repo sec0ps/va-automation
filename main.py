@@ -32,7 +32,8 @@ FILES_TO_UPDATE = [
     "requirements.txt",
     "sql.py",
     "utils.py",
-    "web.py"
+    "web.py",
+    "versions.txt"
 ]
 
 def check_for_updates():
