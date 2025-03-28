@@ -16,10 +16,9 @@ SQLMAP_DIR = os.path.join(BASE_DIR, "sqlmap_reports")
 ZAP_DIR = os.path.join(BASE_DIR, "zap_exports")
 TARGET_FILE = os.path.join(BASE_DIR, "automation.config")
 NETWORK_ENUMERATION_FILE = os.path.join(BASE_DIR, "network.enumeration")  # ✅ Ensure it's defined
-API_KEY_FILE = os.path.join(BASE_DIR, ".zap_api_key")
+#API_KEY_FILE = os.path.join(BASE_DIR, ".zap_api_key")
 LOG_FILE = os.path.join(LOG_DIR, "automation.log")  # ✅ Define LOG_FILE
 TOOL_PATHS_FILE = os.path.join(BASE_DIR, "vapt.config")
-
 
 ZAP_API_KEY = None
 
@@ -49,22 +48,22 @@ logging.basicConfig(
 logging.info("✅ Logging initialized. Log file: %s", LOG_FILE)
 
 def load_api_key():
-    """Retrieve or prompt the user for the OWASP ZAP API key and store it."""
-    if os.path.exists(API_KEY_FILE):
-        with open(API_KEY_FILE, "r") as file:
-            return file.read().strip()
+    """Retrieve or prompt the user for the OWASP ZAP API key and store it in vapt.config."""
+    tool_paths = load_tool_paths()
+
+    if "ZAP_API_KEY" in tool_paths:
+        return tool_paths["ZAP_API_KEY"]
 
     api_key = input("Enter your OWASP ZAP API key: ").strip()
-    with open(API_KEY_FILE, "w") as file:
-        file.write(api_key)
-    os.chmod(API_KEY_FILE, 0o600)
+    tool_paths["ZAP_API_KEY"] = api_key
+    save_tool_paths(tool_paths)
     return api_key
 
 def get_api_key():
-    """Return the cached API key, loads it if necessary."""
+    """Return the cached API key from memory, loading it from vapt.config if necessary."""
     global ZAP_API_KEY
-    if ZAP_API_KEY is None:  # Only load the key if it's not already loaded
-        ZAP_API_KEY = load_api_key()  # Load the key
+    if ZAP_API_KEY is None:
+        ZAP_API_KEY = load_api_key()
     return ZAP_API_KEY
 
 ZAP_API_URL = "http://127.0.0.1:8080"
