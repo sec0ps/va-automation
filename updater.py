@@ -26,7 +26,7 @@ FILES_TO_UPDATE = [
     "fim_client.py",
     "lim.py",
     "log_detection_engine.py",
-    monisec_client.py",
+    "monisec_client.py",
     "remote.py",
     "version.txt"
 ]
