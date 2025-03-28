@@ -5,8 +5,6 @@ import shutil
 import subprocess
 import ipaddress
 import re
-#from cryptography.fernet import Fernet
-
 
 ### ✅ **Define Constants First**
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # Get project base path
@@ -20,6 +18,8 @@ TARGET_FILE = os.path.join(BASE_DIR, "automation.config")
 NETWORK_ENUMERATION_FILE = os.path.join(BASE_DIR, "network.enumeration")  # ✅ Ensure it's defined
 API_KEY_FILE = os.path.join(BASE_DIR, ".zap_api_key")
 LOG_FILE = os.path.join(LOG_DIR, "automation.log")  # ✅ Define LOG_FILE
+TOOL_PATHS_FILE = os.path.join(BASE_DIR, "vapt.config")
+
 
 ZAP_API_KEY = None
 
@@ -48,7 +48,6 @@ logging.basicConfig(
 
 logging.info("✅ Logging initialized. Log file: %s", LOG_FILE)
 
-# config.py
 def load_api_key():
     """Retrieve or prompt the user for the OWASP ZAP API key and store it."""
     if os.path.exists(API_KEY_FILE):
@@ -63,12 +62,29 @@ def load_api_key():
 
 def get_api_key():
     """Return the cached API key, loads it if necessary."""
-    if 'ZAP_API_KEY' not in globals():  # Check if the global variable is not already set
-        global ZAP_API_KEY
-        ZAP_API_KEY = load_api_key()  # Load the key if not already loaded
+    global ZAP_API_KEY
+    if ZAP_API_KEY is None:  # Only load the key if it's not already loaded
+        ZAP_API_KEY = load_api_key()  # Load the key
     return ZAP_API_KEY
 
 ZAP_API_URL = "http://127.0.0.1:8080"
+
+def load_tool_paths():
+    if os.path.exists(TOOL_PATHS_FILE):
+        try:
+            with open(TOOL_PATHS_FILE, "r") as f:
+                return json.load(f)
+        except Exception as e:
+            logging.error(f"❌ Failed to load tool paths: {e}")
+    return {}
+
+def save_tool_paths(paths):
+    try:
+        with open(TOOL_PATHS_FILE, "w") as f:
+            json.dump(paths, f, indent=4)
+        logging.info("✅ Tool paths saved to vapt.config")
+    except Exception as e:
+        logging.error(f"❌ Failed to save tool paths: {e}")
 
 ### **✅ Validation Functions**
 def is_valid_ipv4(ip):
@@ -100,26 +116,19 @@ def is_valid_cidr(netblock):
 
 def find_sqlmap():
     """Find sqlmap.py dynamically at runtime and return its absolute path, or exit if not found."""
-#    logging.info("🔍 Searching for sqlmap...")
-
-    # **First Check System Path**
     sqlmap_exec = shutil.which("sqlmap")
     if sqlmap_exec:
-#        logging.info(f"✅ Found sqlmap at: {sqlmap_exec}")
         return sqlmap_exec
 
-    # **Use `locate` (Faster)**
     try:
         locate_cmd = ["locate", "sqlmap.py"]
         result = subprocess.run(locate_cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
         sqlmap_paths = [path for path in result.stdout.strip().split("\n") if os.path.isfile(path)]
         if sqlmap_paths:
-#            logging.info(f"✅ Found sqlmap at: {sqlmap_paths[0]}")
             return sqlmap_paths[0]
     except Exception:
         logging.warning("⚠ locate command failed, falling back to `find`.")
 
-    # **Use `find` (Slower, Last Resort)**
     try:
         find_cmd = ["find", "/", "-name", "sqlmap.py", "-type", "f", "-not", "-path", "*/proc/*"]
         result = subprocess.run(find_cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
@@ -130,6 +139,9 @@ def find_sqlmap():
     except Exception:
         logging.error("❌ `find` command failed.")
 
+    print("\n❌ ERROR: sqlmap not found! Please install it before running this script.")
+    sys.exit(1)
+
     # **Exit Gracefully if sqlmap is Not Found**
     print("\n❌ ERROR: sqlmap not found! Please install it before running this script.")
     print("\nExecute: git clone https://github.com/sec0ps/va-pt.git")
@@ -137,86 +149,66 @@ def find_sqlmap():
     print("Once installation is completed, then run main.py\n")
     sys.exit(1)
 
-# **Ensure SQLMAP_PATH is Set**
-SQLMAP_PATH = find_sqlmap()
-logging.info(f"✅ SQLMAP_PATH set to: {SQLMAP_PATH}")
-
-
 def find_nikto():
     """Find nikto.pl dynamically at runtime and return its absolute path, or exit if not found."""
-#    logging.info("🔍 Searching for nikto...")
-
-    # **First Check System Path**
     nikto_exec = shutil.which("nikto")
     if nikto_exec:
-#        logging.info(f"✅ Found nikto at: {nikto_exec}")
         return nikto_exec
 
-    # **Use `locate` (Faster)**
     try:
         locate_cmd = ["locate", "nikto.pl"]
         result = subprocess.run(locate_cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
         nikto_paths = [path for path in result.stdout.strip().split("\n") if os.path.isfile(path)]
         if nikto_paths:
-#            logging.info(f"✅ Found nikto at: {nikto_paths[0]}")
             return nikto_paths[0]
     except Exception:
         logging.warning("⚠ locate command failed, falling back to `find`.")
 
-    # **Use `find` (Slower, Last Resort)**
     try:
         find_cmd = ["find", "/", "-name", "nikto.pl", "-type", "f", "-not", "-path", "*/proc/*"]
         result = subprocess.run(find_cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
         nikto_paths = [path for path in result.stdout.strip().split("\n") if os.path.isfile(path)]
         if nikto_paths:
-#            logging.info(f"✅ Found nikto at: {nikto_paths[0]}")
             return nikto_paths[0]
     except Exception:
         logging.error("❌ `find` command failed.")
 
-    # **Exit Gracefully if nikto is Not Found**
     print("\n❌ ERROR: Nikto not found! Please install it before running this script.")
-    print("\nExecute: git clone https://github.com/sec0ps/va-pt.git")
-    print("Run the installation script: python3 vapt-installer.py")
-    print("Once installation is completed, then run main.py\n")
     sys.exit(1)
-
-# **Ensure NIKTO_PATH is Set**
-NIKTO_PATH = find_nikto()
-logging.info(f"✅ NIKTO_PATH set to: {NIKTO_PATH}")
 
 def find_zap():
     """Locate zap.sh dynamically using `locate` or `find`, excluding 'Program Files' in WSL."""
-#    logging.info("🔍 Searching for zap.sh...")
-
-    # Try using `locate` first (fastest method)
     try:
         result = subprocess.run(["locate", "zap.sh"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
         paths = [p for p in result.stdout.strip().split("\n") if "Program Files" not in p]
-
         if paths:
-#            logging.info(f"✅ Found zap.sh at: {paths[0]}")
-            return paths[0]  # Return the first valid result
-
+            return paths[0]
     except subprocess.CalledProcessError:
         logging.warning("⚠ `locate` command failed, falling back to `find`.")
 
-    # Fallback to using `find` if `locate` is not available
     try:
         find_cmd = ["find", "/", "-name", "zap.sh", "-type", "f", "-not", "-path", "'*/proc/*'", "-not", "-path", "'*/mnt/c/Program Files/*'", "2>/dev/null"]
         result = subprocess.run(" ".join(find_cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True)
         paths = [p for p in result.stdout.strip().split("\n") if "Program Files" not in p]
-
         if paths:
-#            logging.info(f"✅ Found zap.sh at: {paths[0]}")
             return paths[0]
-
     except subprocess.CalledProcessError:
         logging.error("❌ `find` command failed. zap.sh not found.")
 
     logging.error("❌ zap.sh not found! Ensure OWASP ZAP is installed.")
-    return None  # Return None if not found
+    return None
 
-# Set the ZAP path as a global variable in config
-ZAP_PATH = find_zap()
-logging.info(f"✅ ZAP_PATH set to: {ZAP_PATH}" if ZAP_PATH else "❌ ZAP_PATH not found!")
+tool_paths = load_tool_paths()
+
+if not tool_paths.get("SQLMAP_PATH"):
+    tool_paths["SQLMAP_PATH"] = find_sqlmap()
+if not tool_paths.get("NIKTO_PATH"):
+    tool_paths["NIKTO_PATH"] = find_nikto()
+if not tool_paths.get("ZAP_PATH"):
+    tool_paths["ZAP_PATH"] = find_zap()
+
+save_tool_paths(tool_paths)
+
+SQLMAP_PATH = tool_paths["SQLMAP_PATH"]
+NIKTO_PATH = tool_paths["NIKTO_PATH"]
+ZAP_PATH = tool_paths["ZAP_PATH"]
