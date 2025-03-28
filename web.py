@@ -30,7 +30,7 @@ def check_zap_running():
 
     for attempt in range(1, max_retries + 1):
         try:
-            logging.info(f"🔍 Checking OWASP ZAP API availability (Attempt {attempt}/{max_retries})...")
+            logging.info(f"ߔ Checking OWASP ZAP API availability (Attempt {attempt}/{max_retries})...")
             response = requests.get(api_url, timeout=5)
             response.raise_for_status()
             zap_version = response.json().get('version', 'Unknown')
@@ -59,7 +59,7 @@ def start_zap_headless():
     session_filename = f"zap_session_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     session_path = os.path.join(ZAP_DIR, session_filename)
 
-    logging.info(f"🚀 Starting OWASP ZAP in headless mode with session stored at: {session_path}")
+    logging.info(f"ߚ Starting OWASP ZAP in headless mode with session stored at: {session_path}")
 
     try:
         # Start ZAP in daemon mode
@@ -97,7 +97,7 @@ def process_network_enumeration():
     target = data.get("target")
 
     if os.path.exists(NETWORK_ENUMERATION_FILE):
-        logging.info(f"📄 Found {NETWORK_ENUMERATION_FILE}. Processing targets...")
+        logging.info(f"ߓ Found {NETWORK_ENUMERATION_FILE}. Processing targets...")
 
         with open(NETWORK_ENUMERATION_FILE, "r") as file:
             targets = file.read().splitlines()
@@ -116,7 +116,7 @@ def process_network_enumeration():
                     logging.error(f"❌ Invalid URL format detected in network.enumeration: {clean_target}")
                     continue  # Skip invalid URLs
 
-                logging.info(f"🚀 Valid target found: {clean_target}")
+                logging.info(f"ߚ Valid target found: {clean_target}")
                 web_application_enumeration(clean_target)
             return  # ✅ Exit after processing network enumeration targets
 
@@ -130,12 +130,12 @@ def process_network_enumeration():
     clean_target = target.strip().replace("http://", "").replace("https://", "")  # ✅ Strip protocol before use
 
     if is_valid_fqdn(clean_target):
-        logging.info(f"🚀 Starting web application enumeration for FQDN target: {clean_target}")
+        logging.info(f"ߚ Starting web application enumeration for FQDN target: {clean_target}")
         web_application_enumeration(f"http://{clean_target}")
         web_application_enumeration(f"https://{clean_target}")
 
     elif is_valid_ipv4(clean_target) or is_valid_ipv6(clean_target) or is_valid_cidr(clean_target):
-        logging.info(f"🚀 Starting web application enumeration for target: {clean_target}")
+        logging.info(f"ߚ Starting web application enumeration for target: {clean_target}")
         web_application_enumeration(clean_target)
     else:
         logging.error(f"❌ Invalid target format: {clean_target}")
@@ -178,17 +178,17 @@ def web_application_enumeration(target):
     # ✅ Reconstruct the URL to ensure consistency
     formatted_url = urlunparse((parsed_url.scheme, parsed_url.netloc, parsed_url.path, '', '', ''))
 
-    logging.info(f"🚀 Starting web scan on: {formatted_url}")
+    logging.info(f"ߚ Starting web scan on: {formatted_url}")
 
     try:
-        logging.info(f"🚀 Sending target to ZAP: {formatted_url}")
+        logging.info(f"ߚ Sending target to ZAP: {formatted_url}")
         scan_target_with_zap(formatted_url)
     except Exception as e:
         logging.error(f"❌ Error scanning {formatted_url}: {e}")
 
 def scan_target_with_zap(target_url):
     """Scan a web service using OWASP ZAP."""
-    logging.info(f"🚀 Starting ZAP scan on: {target_url}")
+    logging.info(f"ߚ Starting ZAP scan on: {target_url}")
 
     session = requests.Session()
     headers = {"Content-Type": "application/json"}
@@ -208,7 +208,7 @@ def scan_target_with_zap(target_url):
         try:
             response = session.get(spider_status_url, headers=headers, timeout=10)
             status = response.json().get("status", "0")
-            logging.info(f"🕷 Spider Progress: {status}%")
+            logging.info(f"ߕ Spider Progress: {status}%")
             if status == "100":
                 break
         except requests.RequestException as e:
@@ -232,7 +232,7 @@ def scan_target_with_zap(target_url):
         try:
             response = session.get(scan_status_url, headers=headers, timeout=10)
             status = response.json().get("status", "0")
-            logging.info(f"🔥 Active Scan Progress: {status}%")
+            logging.info(f"ߔ Active Scan Progress: {status}%")
             if status == "100":
                 break
         except requests.RequestException as e:
@@ -256,7 +256,7 @@ def export_zap_xml_report(target_url):
         report_file = os.path.join(REPORT_DIR, f"zap_report_{target_name}.xml")
 
         url = f"{ZAP_API_URL}/OTHER/core/other/xmlreport/?apikey={ZAP_API_KEY}"
-        logging.info(f"📄 Fetching XML report for {target_url} from {url}")
+        logging.info(f"ߓ Fetching XML report for {target_url} from {url}")
 
         response = requests.get(url, timeout=30)
 
@@ -266,16 +266,16 @@ def export_zap_xml_report(target_url):
             logging.info(f"✅ XML report saved: {report_file}")
 
             # ✅ Debug Logging Before Starting Nikto
-#            logging.info(f"🔎 Checking if Nikto exists before launching scan for {target_url}...")
+#            logging.info(f"ߔ Checking if Nikto exists before launching scan for {target_url}...")
             nikto_path = find_nikto()
 
             if nikto_path:
-                logging.info(f"🚀 Found Nikto at {nikto_path}, launching scan for {target_url}")
+                logging.info(f"ߚ Found Nikto at {nikto_path}, launching scan for {target_url}")
 
                 # ✅ Execute Nikto in Parallel
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     executor.submit(run_nikto_scan, target_url, nikto_path)
-                logging.info(f"🔄 Nikto scan should now be running for {target_url}")
+                logging.info(f"ߔ Nikto scan should now be running for {target_url}")
             else:
                 logging.error("❌ Nikto not found! Skipping Nikto scan.")
 
@@ -287,7 +287,7 @@ def export_zap_xml_report(target_url):
 
 def select_nikto_targets():
     """Determine the correct targets for Nikto scanning and execute scans accordingly."""
-#    logging.info("🔍 [DEBUG] Entered select_nikto_targets()...")
+#    logging.info("ߔ [DEBUG] Entered select_nikto_targets()...")
 
     nikto_path = find_nikto()
     if not nikto_path:
@@ -297,7 +297,7 @@ def select_nikto_targets():
 #    logging.info(f"✅ [DEBUG] Found Nikto at: {nikto_path}")
 
     if os.path.exists(NETWORK_ENUMERATION_FILE):
-        logging.info(f"📄 Found {NETWORK_ENUMERATION_FILE}. Using it for Nikto scans.")
+        logging.info(f"ߓ Found {NETWORK_ENUMERATION_FILE}. Using it for Nikto scans.")
 
         with open(NETWORK_ENUMERATION_FILE, "r") as file:
             targets = file.read().splitlines()
@@ -314,14 +314,14 @@ def select_nikto_targets():
         logging.warning("⚠ No valid target found. Nikto scan skipped.")
         return
 
- #   logging.info(f"🎯 [DEBUG] Selected target from config: {target}")
+ #   logging.info(f"ߎ [DEBUG] Selected target from config: {target}")
 
     if is_valid_cidr(target):
-        logging.info(f"🌍 Expanding CIDR block: {target}")
+        logging.info(f"ߌ Expanding CIDR block: {target}")
 
         for ip in ip_network(target).hosts():
             ip_str = str(ip)
-#            logging.info(f"🔎 [DEBUG] Checking web services on {ip_str}...")
+#            logging.info(f"ߔ [DEBUG] Checking web services on {ip_str}...")
 
             https_target = f"https://{ip_str}:443"
             http_target = f"http://{ip_str}:80"
@@ -346,7 +346,7 @@ def select_nikto_targets():
 
 def run_nikto_scan(target, nikto_path):
     """Run a Nikto scan against the target using the dynamically located Nikto."""
-#    logging.info(f"🚀 [DEBUG] Preparing Nikto scan for: {target}")
+#    logging.info(f"ߚ [DEBUG] Preparing Nikto scan for: {target}")
 
     if not nikto_path:
         logging.error("❌ Nikto not found on the system. Ensure it is installed.")
@@ -382,7 +382,7 @@ def run_nikto_scan(target, nikto_path):
         "-useragent", random_user_agent  # ✅ Wrapped in quotes
     ]
 
-#    logging.info(f"📢 [DEBUG] Running Nikto command: {' '.join(nikto_command)}")
+#    logging.info(f"ߓ [DEBUG] Running Nikto command: {' '.join(nikto_command)}")
 
     try:
         result = subprocess.run(nikto_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
@@ -392,7 +392,7 @@ def run_nikto_scan(target, nikto_path):
 
 def main():
     """Main function to determine whether to use `network.enumeration` or perform web enumeration."""
-    logging.info("🔎 Checking for existing network enumeration results...")
+    logging.info("ߔ Checking for existing network enumeration results...")
     process_network_enumeration()
 
 if __name__ == "__main__":
