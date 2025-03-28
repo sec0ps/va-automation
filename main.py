@@ -20,7 +20,8 @@ import subprocess
 import xml.etree.ElementTree as ET
 from web import *
 from utils import check_target_defined, change_target, purge_target_prompt, display_logo
-from config import LOG_DIR, LOG_FILE, find_sqlmap, find_nikto, TARGET_FILE, find_zap
+#from config import LOG_DIR, LOG_FILE, find_sqlmap, find_nikto, TARGET_FILE, find_zap, get_api_key
+from config import LOG_DIR, LOG_FILE, SQLMAP_PATH, NIKTO_PATH, ZAP_PATH, TARGET_FILE, get_api_key
 
 GITHUB_RAW_BASE = "https://raw.githubusercontent.com/sec0ps/vapt-automation/main/"
 GITHUB_VERSION_URL = GITHUB_RAW_BASE + "version.txt"
@@ -34,7 +35,7 @@ FILES_TO_UPDATE = [
     "sql.py",
     "utils.py",
     "web.py",
-    "versions.txt"
+    "version.txt"
 ]
 
 def check_for_updates():
@@ -104,13 +105,16 @@ def main():
         print("\n[+] Updates were applied, please restart the program.")
         return  # Exit after update
 
+    # Now load the ZAP API key after the update check
+    api_key = get_api_key()  # Load the API key only after the update check
+
     # Proceed with the rest of the program logic if no updates were required
     check_zap_running()
 
     # Locate tools dynamically
-    sqlmap_path = find_sqlmap()  # ✅ Find sqlmap
-    nikto_path = find_nikto()  # ✅ Find Nikto
-    zap_path = find_zap()
+    sqlmap_path = SQLMAP_PATH
+    nikto_path = NIKTO_PATH
+    zap_path = ZAP_PATH
 
     # Ensure a valid target is set
     target = check_target_defined()
