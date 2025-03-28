@@ -121,14 +121,14 @@ def main():
 
     # Display paths and target
     display_logo()
-    print(f"\n🎯 Current Target: {target}")
-    print(f"🛠 SQLMAP Path: {sqlmap_path if sqlmap_path else '❌ Not Found'}")
-    print(f"🛠 Nikto Path: {nikto_path if nikto_path else '❌ Not Found'}")
-    print(f"🛠 OWASP ZAP Path: {zap_path if zap_path else '❌ Not Found'}\n")
+    print(f"\nߎ Current Target: {target}")
+    print(f"ߛ SQLMAP Path: {sqlmap_path if sqlmap_path else '❌ Not Found'}")
+    print(f"ߛ Nikto Path: {nikto_path if nikto_path else '❌ Not Found'}")
+    print(f"ߛ OWASP ZAP Path: {zap_path if zap_path else '❌ Not Found'}\n")
 
     def network_enumeration():
         """Prompt for scan type and run Nmap scan."""
-        print("\n[🔍 Network Enumeration Options]")
+        print("\n[ߔ Network Enumeration Options]")
         print("1️⃣ Fast Scan: Quick service discovery and fingerprinting")
         print("2️⃣ Thorough Scan: In-depth analysis including vulnerability detection")
 
@@ -160,11 +160,11 @@ def main():
         print("5️⃣ Change Target")
         print("6️⃣ Exit (or type 'exit')")
 
-        choice = input("\n🔹 Select an option (1-6 or 'exit'): ").strip().lower()
+        choice = input("\nߔ Select an option (1-6 or 'exit'): ").strip().lower()
 
         if choice in ("exit", "6"):
             purge_target_prompt()
-            logging.info("🔚 Exiting program.")
+            logging.info("ߔ Exiting program.")
             break
 
         action = actions.get(choice)
@@ -176,9 +176,9 @@ def main():
 if __name__ == "__main__":
     try:
         # Perform the update check before running the main program
-        check_for_updates()
+#        check_for_updates()
         main()
 
     except KeyboardInterrupt:
         print("\n[!] Program interrupted. Exiting gracefully...")
-        logging.info("🔚 Exiting program due to keyboard interrupt.")
+        logging.info("ߔ Exiting program due to keyboard interrupt.")
