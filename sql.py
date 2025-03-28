@@ -8,7 +8,7 @@ import utils
 from config import NETWORK_ENUMERATION_FILE, SQLMAP_PATH
 
 ENUMERATION_FILE_PATH = os.path.abspath(NETWORK_ENUMERATION_FILE)
-logging.info(f"🔍 Checking for enumeration file at: {ENUMERATION_FILE_PATH}")
+logging.info(f"ߔ Checking for enumeration file at: {ENUMERATION_FILE_PATH}")
 
 def sqli_automation_enumerations():
     """Run SQLi spider enumeration on all targets stored in network.enumeration using sqlmap in parallel.
@@ -29,7 +29,7 @@ def sqli_automation_enumerations():
 
     # ✅ Try loading targets from `network.enumeration`
     if os.path.exists(ENUMERATION_FILE_PATH):
-        logging.info(f"📄 Using targets from {ENUMERATION_FILE_PATH}.")
+        logging.info(f"ߓ Using targets from {ENUMERATION_FILE_PATH}.")
         try:
             with open(ENUMERATION_FILE_PATH, "r") as file:
                 targets = file.read().splitlines()
@@ -51,7 +51,7 @@ def sqli_automation_enumerations():
             logging.error("❌ No valid target found. Ensure you set a target before running SQLi testing.")
             return
 
-    logging.info(f"🔍 Starting parallel SQLi automation for {len(targets)} targets...")
+    logging.info(f"ߔ Starting parallel SQLi automation for {len(targets)} targets...")
     run_bulk_sqlmap(targets, sqlmap_path)
 
 def run_sqlmap(target, sqlmap_path):
@@ -75,7 +75,7 @@ def run_sqlmap(target, sqlmap_path):
     xml_report = os.path.join(report_dir, f"sqlmap_report_{safe_filename}.xml")
 
     try:
-        logging.info(f"🚀 Running SQLMap on: {target}")
+        logging.info(f"ߚ Running SQLMap on: {target}")
 
         sqlmap_cmd = [
             "python3", sqlmap_path,
@@ -94,7 +94,7 @@ def run_sqlmap(target, sqlmap_path):
             "--disable-coloring"  # ✅ Ensures clean XML output
         ]
 
-        logging.info(f"🛠 SQLMap Command: {' '.join(sqlmap_cmd)}")
+        logging.info(f"ߛ SQLMap Command: {' '.join(sqlmap_cmd)}")
 
         # ✅ Run SQLMap and capture output
         process = subprocess.Popen(sqlmap_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -121,7 +121,7 @@ def run_bulk_sqlmap(targets, sqlmap_path):
         logging.warning("⚠ No targets found. Skipping SQLi scanning.")
         return
 
-    logging.info(f"🔍 Starting SQLi automation for {len(targets)} targets...")
+    logging.info(f"ߔ Starting SQLi automation for {len(targets)} targets...")
 
     with ThreadPoolExecutor(max_workers=5) as executor:
         list(tqdm(executor.map(lambda target: run_sqlmap(target, sqlmap_path), targets), total=len(targets), desc="SQLi Scanning", unit="target"))
@@ -141,7 +141,7 @@ def sqli_testing_automation(sqlmap_path):
 
     # ✅ Try using `network.enumeration` first
     if os.path.exists(ENUMERATION_FILE_PATH):
-        logging.info(f"📄 Using targets from {ENUMERATION_FILE_PATH}.")
+        logging.info(f"ߓ Using targets from {ENUMERATION_FILE_PATH}.")
         try:
             with open(ENUMERATION_FILE_PATH, "r") as file:
                 targets = [line.strip() for line in file if line.strip()]
@@ -165,5 +165,5 @@ def sqli_testing_automation(sqlmap_path):
         logging.warning("⚠ No targets found. Skipping SQLi scanning.")
         return
 
-    logging.info(f"🔍 Starting SQLi automation for {len(targets)} targets...")
+    logging.info(f"ߔ Starting SQLi automation for {len(targets)} targets...")
     run_bulk_sqlmap(targets, sqlmap_path)
