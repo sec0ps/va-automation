@@ -110,7 +110,7 @@ def is_valid_cidr(netblock):
 def change_target():
     """Prompt the user to change the target and update it securely."""
     while True:
-        new_target = input("\n🔹 Enter the new target (IPv4, IPv6, FQDN, or CIDR Netblock): ").strip()
+        new_target = input("\nߔ Enter the new target (IPv4, IPv6, FQDN, or CIDR Netblock): ").strip()
 
         if is_valid_ipv4(new_target) or is_valid_ipv6(new_target) or is_valid_fqdn(new_target) or is_valid_cidr(new_target):
             store_data("target", new_target)  # ✅ Store securely
@@ -119,7 +119,7 @@ def change_target():
             # ✅ Write the new target to `network.enumeration` WITHOUT expanding CIDR
             with open(NETWORK_ENUMERATION_FILE, "w") as file:
                 file.write(new_target + "\n")
-                logging.info(f"📄 Target written to {NETWORK_ENUMERATION_FILE}")
+                logging.info(f"ߓ Target written to {NETWORK_ENUMERATION_FILE}")
 
             print(f"\n✅ Target changed to: {new_target}\n")
             return
@@ -133,7 +133,7 @@ def stop_zap():
     api_url = f"{ZAP_API_URL}/JSON/core/action/shutdown/?apikey={ZAP_API_KEY}"
 
     try:
-        logging.info("🛑 Attempting to shut down OWASP ZAP...")
+        logging.info("ߛ Attempting to shut down OWASP ZAP...")
         response = requests.get(api_url, timeout=5)
 
         if response.status_code == 200:
