@@ -1,184 +1,209 @@
 import os
-import sys
-import json
 import time
+import psutil
+import subprocess
 import logging
-import requests
-import re
-import socket
-import subprocess
-import shutil
-import ssl
-import ipaddress
-import requests
-from tqdm import tqdm
-from ipaddress import ip_network
-import time
-from urllib.parse import urlparse
-from concurrent.futures import ThreadPoolExecutor
-import subprocess
-import xml.etree.ElementTree as ET
-from web import *
-from utils import check_target_defined, change_target, purge_target_prompt, display_logo
-#from config import LOG_DIR, LOG_FILE, find_sqlmap, find_nikto, TARGET_FILE, find_zap, get_api_key
-from config import LOG_DIR, LOG_FILE, SQLMAP_PATH, NIKTO_PATH, ZAP_PATH, TARGET_FILE, get_api_key
+import sys
+import signal
+import remote
+import threading
+import json
+import updater
 
-GITHUB_RAW_BASE = "https://raw.githubusercontent.com/sec0ps/vapt-automation/main/"
-GITHUB_VERSION_URL = GITHUB_RAW_BASE + "version.txt"
-LOCAL_VERSION_FILE = "version.txt"
+# Ensure logs directory exists
+LOG_DIR = "./logs"
+os.makedirs(LOG_DIR, exist_ok=True)
+LOG_FILE = os.path.join(LOG_DIR, "monisec-endpoint.log")
 
-FILES_TO_UPDATE = [
-    "README.md",
-    "config.py",
-    "main.py",
-    "requirements.txt",
-    "sql.py",
-    "utils.py",
-    "web.py",
-    "version.txt"
-]
+# Set log file permissions to 600 (read/write for user only)
+try:
+    with open(LOG_FILE, 'a') as f:
+        pass
+    os.chmod(LOG_FILE, 0o600)
+except Exception as e:
+    print(f"Failed to set log file permissions: {e}")
 
-def check_for_updates():
-    print("\n=== Checking for updates from GitHub... ===")
-    updated = False
+# Configure logging to write to file and optionally to console
+log_formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+log_handler = logging.FileHandler(LOG_FILE)
+log_handler.setFormatter(log_formatter)
+log_handler.setLevel(logging.DEBUG)
+logging_handlers = [log_handler]
 
-    try:
-        # Step 1: Read local version
-        local_version = "0.0.0"
-        if os.path.exists(LOCAL_VERSION_FILE):
-            with open(LOCAL_VERSION_FILE, "r") as f:
-                local_version = f.read().strip()
+# Only add console output if not running in daemon mode
+if not (len(sys.argv) > 1 and sys.argv[1] == "-d"):
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setFormatter(log_formatter)
+    console_handler.setLevel(logging.DEBUG)
+    logging_handlers.append(console_handler)
 
-        # Step 2: Get remote version
-        response = requests.get(GITHUB_VERSION_URL, timeout=5)
-        if response.status_code != 200:
-            print("[!] Could not retrieve remote version info (HTTP {}).".format(response.status_code))
-            print("=== Update check skipped ===\n")
-            return False
+logging.basicConfig(level=logging.DEBUG, handlers=logging_handlers)
 
-        remote_version = response.text.strip()
+# List of monitored processes
+PROCESSES = {
+    "fim_client": "python3 fim_client.py -d",
+    "pim": "python3 pim.py -d",
+}
 
-        # Step 3: Compare versions
-        if remote_version > local_version:
-            print(f"[+] New version detected: {remote_version} (current: {local_version})")
-            for filename in FILES_TO_UPDATE:
-                file_url = GITHUB_RAW_BASE + filename
-                file_resp = requests.get(file_url, timeout=10)
-                if file_resp.status_code == 200:
-                    with open(filename, "wb") as f:
-                        f.write(file_resp.content)
-                    print(f"    -> Updated {filename}")
-                else:
-                    print(f"    [!] Failed to update {filename} (HTTP {file_resp.status_code})")
-
-            # Step 4: Update local version record
-            with open(LOCAL_VERSION_FILE, "w") as f:
-                f.write(remote_version)
-
-            updated = True
-            print("[✓] Update complete. Please restart the tool to load latest changes.")
+def start_process(name):
+    if name in PROCESSES:
+        if is_process_running(name):
+            logging.info(f"{name} is already running.")
         else:
-            print("[✓] Already running the latest version.")
+            logging.info(f"Starting {name}...")
+            process = subprocess.Popen(PROCESSES[name].split(), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+            time.sleep(2)  # Wait for process to start
+            if is_process_running(name):
+                logging.info(f"{name} started successfully with PID {process.pid}.")
+            else:
+                logging.error(f"Failed to start {name}.")
 
-    except Exception as e:
-        print(f"[!] Update check failed: {e}")
+def stop_process(name):
+    if name in PROCESSES:
+        pid = is_process_running(name)
+        if pid:
+            logging.info(f"Stopping {name} with PID {pid}...")
+            os.kill(pid, signal.SIGTERM)
+        else:
+            logging.info(f"{name} is not running.")
+    else:
+        logging.warning(f"[ERROR] Attempted to stop unknown process: {name}")
 
-    print("=== Update check complete ===\n")
-    return updated
+# Function to restart a process
+def restart_process(name):
+    stop_process(name)
+    time.sleep(2)
+    start_process(name)
 
-def is_valid_url(url):
-    """Validate a given URL."""
-    parsed_url = urlparse(url)
-    return all([parsed_url.scheme, parsed_url.netloc])
+def is_process_running(name):
+    """Check if a specific process is running by comparing executable name."""
+    for proc in psutil.process_iter(attrs=['pid', 'name', 'cmdline']):
+        try:
+            exe_name = proc.info['name']
+            cmdline = " ".join(proc.info['cmdline']) if proc.info['cmdline'] else ""
 
-def full_automation():
-    logging.info("Running full automation...")
+            # Only match exact script calls, avoid false positives like 'kate'
+            if exe_name == "python3" and f"{name}.py" in cmdline:
+                return proc.info['pid']
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+            continue
+    return None
 
-def automated_network_enumeration():
-    logging.info("Running automated network enumeration...")
-
-def main():
-    """Main function to execute the menu and handle user input."""
-    # Ensure updates are checked before anything else happens
-    updated = check_for_updates()
-    if updated:
-        print("\n[+] Updates were applied, please restart the program.")
-        return  # Exit after update
-
-    # Now load the ZAP API key after the update check
-    api_key = get_api_key()  # Load the API key only after the update check
-
-    # Proceed with the rest of the program logic if no updates were required
-    check_zap_running()
-
-    # Locate tools dynamically
-    sqlmap_path = SQLMAP_PATH
-    nikto_path = NIKTO_PATH
-    zap_path = ZAP_PATH
-
-    # Ensure a valid target is set
-    target = check_target_defined()
-
-    # Display paths and target
-    display_logo()
-    print(f"\nߎ Current Target: {target}")
-    print(f"ߛ SQLMAP Path: {sqlmap_path if sqlmap_path else '❌ Not Found'}")
-    print(f"ߛ Nikto Path: {nikto_path if nikto_path else '❌ Not Found'}")
-    print(f"ߛ OWASP ZAP Path: {zap_path if zap_path else '❌ Not Found'}\n")
-
-    def network_enumeration():
-        """Prompt for scan type and run Nmap scan."""
-        print("\n[ߔ Network Enumeration Options]")
-        print("1️⃣ Fast Scan: Quick service discovery and fingerprinting")
-        print("2️⃣ Thorough Scan: In-depth analysis including vulnerability detection")
-
-        scan_type = input("\nSelect an option (1 or 2): ").strip()
-        if scan_type not in ["1", "2"]:
-            print("❌ Invalid selection. Returning to menu.")
-            return
-
-        target = check_target_defined()
-        if isinstance(target, list):
-            target = target[0]  # Ensure it's always a string
-
-        run_bulk_nmap_scan(target, scan_type)
-
-    actions = {
-        "1": full_automation,
-        "2": network_enumeration,
-        "3": process_network_enumeration,
-        "4": lambda: sqli_testing_automation(sqlmap_path),
-        "5": change_target,  # ✅ New option for changing the target
-    }
-
+def monitor_processes():
     while True:
-        print("\n[ ⚙ Automated Security Testing Framework ⚙ ]")
-        print("1️⃣ Full Automation - Not Available Yet")
-        print("2️⃣ Network Enumeration & Vulnerability Assessment")
-        print("3️⃣ Web Application Enumeration & Testing")
-        print("4️⃣ SQLi Testing Automation")
-        print("5️⃣ Change Target")
-        print("6️⃣ Exit (or type 'exit')")
+        all_running = True
+        for name in PROCESSES:
+            if not is_process_running(name):
+                logging.warning(f"{name} is not running. Restarting...")
+                start_process(name)
+                all_running = False  # Mark that at least one process was restarted
 
-        choice = input("\nߔ Select an option (1-6 or 'exit'): ").strip().lower()
+        time.sleep(10 if not all_running else 60)  # Increase interval if stable
 
-        if choice in ("exit", "6"):
-            purge_target_prompt()
-            logging.info("ߔ Exiting program.")
-            break
+# Handle graceful shutdown on keyboard interrupt
+def handle_exit(signum, frame):
+    logging.info("Keyboard interrupt received. Stopping MoniSec client and all related processes...")
 
-        action = actions.get(choice)
-        if action:
-            action()
-        else:
-            logging.error("❌ Invalid selection. Please try again.")
+    # Prevent double SIGINT behavior
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+    stop_process("fim_client")
+    stop_process("pim")
+
+    time.sleep(2)
+    logging.info("MoniSec client shutdown complete.")
+    sys.exit(0)
+
+# Register signal handler for graceful shutdown
+signal.signal(signal.SIGINT, handle_exit)
+signal.signal(signal.SIGTERM, handle_exit)
 
 if __name__ == "__main__":
+# Always check for updates before doing anything else
     try:
-        # Perform the update check before running the main program
-#        check_for_updates()
-        main()
+        updater.check_for_updates()
+    except Exception as e:
+        logging.warning(f"Updater failed: {e}")
 
-    except KeyboardInterrupt:
-        print("\n[!] Program interrupted. Exiting gracefully...")
-        logging.info("ߔ Exiting program due to keyboard interrupt.")
+    if len(sys.argv) > 1:
+        action = sys.argv[1]
+
+        # Restart MoniSec Client
+        if action == "restart":
+            stop_process("monisec_client")
+            time.sleep(2)
+            start_process("monisec_client")
+
+        # Start, Stop, Restart PIM or FIM
+        elif action in ["pim", "fim"]:
+            if len(sys.argv) > 2 and sys.argv[2] in ["start", "stop", "restart"]:
+                target_process = f"{action}_client"
+                if sys.argv[2] == "start":
+                    start_process(target_process)
+                elif sys.argv[2] == "stop":
+                    stop_process(target_process)
+                elif sys.argv[2] == "restart":
+                    restart_process(target_process)
+            else:
+                print(f"[ERROR] Invalid command. Usage: monisec_client {action} start|stop|restart")
+                sys.exit(1)
+
+        # Import PSK for authentication
+        elif action == "import-psk":
+            remote.import_psk()
+
+        # Authenticate with server and exit
+        elif action == "auth":
+            if len(sys.argv) > 2 and sys.argv[2] == "test":
+                print("[INFO] Attempting authentication using stored credentials...")
+                success = remote.authenticate_with_server()
+                if success:
+                    print("[SUCCESS] Authentication successful.")
+                    sys.exit(0)  # ✅ Exit gracefully on success
+                else:
+                    print("[ERROR] Authentication failed.")
+                    sys.exit(1)  # ✅ Exit with error code
+            else:
+                print("[ERROR] Invalid command. Usage: monisec_client auth test")
+                sys.exit(1)
+
+        # Daemon mode
+        elif action == "-d":
+            pid = os.fork()
+            if pid > 0:
+                sys.exit(0)  # Exit parent process
+            os.setsid()
+            os.umask(0)
+            sys.stdin = open(os.devnull, 'r')
+
+            logging.info("MoniSec Endpoint Monitor started in daemon mode.")
+
+            # Start remote command listener in a separate thread
+            listener_thread = threading.Thread(target=remote.start_client_listener, daemon=True)
+            listener_thread.start()
+
+            monitor_processes()
+
+        # Print usage information for invalid commands
+        else:
+            print(
+                """Usage:
+    monisec_client restart                  # Restart monisec_client
+    monisec_client pim start|stop|restart   # Control PIM process
+    monisec_client fim start|stop|restart   # Control FIM process
+    monisec_client import-psk               # Import PSK for authentication
+    monisec_client auth test                 # Test authentication, then exit"""
+            )
+            sys.exit(1)
+
+    else:
+        # Run in foreground mode (default behavior)
+        logging.info("MoniSec Endpoint Monitor started in foreground.")
+
+        # Start remote command listener in a separate thread
+        listener_thread = threading.Thread(target=remote.start_client_listener, daemon=True)
+        listener_thread.start()
+
+        remote.check_auth_and_send_logs()
+        monitor_processes()
+
