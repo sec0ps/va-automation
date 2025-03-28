@@ -52,7 +52,7 @@ def run_nmap_scan(target, scan_type):
             "-oN", output_txt, "-oX", output_xml, target
         ]
 
-    logging.info(f"🚀 Running Nmap scan on {target}: {' '.join(command)}")
+    logging.info(f"ߚ Running Nmap scan on {target}: {' '.join(command)}")
 
     try:
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
@@ -89,7 +89,7 @@ def run_bulk_nmap_scan(targets, scan_type):
         logging.error("❌ No valid targets after filtering. Exiting Nmap scanning.")
         return
 
-    logging.info(f"🔍 Starting parallel Nmap scans for {len(valid_targets)} targets...")
+    logging.info(f"ߔ Starting parallel Nmap scans for {len(valid_targets)} targets...")
 
     # ✅ Run scans in parallel with a max of 5 concurrent scans
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
